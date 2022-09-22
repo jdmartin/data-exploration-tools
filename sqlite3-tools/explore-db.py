@@ -1,0 +1,457 @@
+import csv
+import os
+import sqlite3
+
+from rich import print
+from rich.console import Console
+from rich.prompt import Prompt
+from rich.table import Table
+
+#Helpers
+console = Console()
+tables_and_columns = {}
+tables_row_counts = {}
+working_table_choice = ""
+current_headers = ""
+current_prepared_rows = ""
+
+#Project helpers
+def get_files_to_work_on():
+    prepared_file_list = []
+    file_list = os.listdir("./dbs/")
+    for file in file_list:
+        if file == '.DS_Store':
+            pass #Protect against Mac nonsense.
+        else:
+            prepared_file_list.append(file)
+    return prepared_file_list
+
+available_db_files = get_files_to_work_on()
+working_file_name = ""
+
+def get_project_choice():
+    project_choice = ""
+    
+    i = 1
+    choices_dict = {}
+    for project in available_db_files:
+        choices_dict[str(i)] = project
+        i += 1
+    
+    while str(project_choice) not in choices_dict.keys():
+        console.clear()
+        print("\n")
+        i = 1
+        for project in available_db_files:
+            console.print("[purple3]" + str(i) + "[/purple3]" + ". " + project)
+            i += 1
+        project_choice = input("\nWhich project would you like to explore? ")
+        
+    working_file_name = choices_dict[str(project_choice)]
+    return working_file_name
+
+def get_all_table_names_from_db():
+    disk_cur.execute("SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'")
+    the_tables = disk_cur.fetchall()
+    for table in the_tables:
+        tables_and_columns[table[0]] = None
+
+def get_all_column_names_from_table(table_name):
+    disk_cur.execute(f"PRAGMA table_info({table_name})")
+    the_cols = disk_cur.fetchall()
+    list_of_cols = []
+    for item in the_cols:
+        list_of_cols.append(item[1])
+    tables_and_columns[table_name] = list_of_cols
+
+def get_all_table_row_counts(table_name):
+    disk_cur.execute(f"SELECT MAX(rowid) FROM {table_name};")
+    row_count = disk_cur.fetchone()
+    tables_row_counts[table_name] = row_count[0]
+
+def get_table_choice_for_exploring():
+    console.clear()
+    i = 1
+    numbered_tables = {}
+    for table in tables_and_columns.keys():
+        numbered_tables[str(i)] = table
+        i += 1
+
+    print(f"Exploring project [bold green]'{working_file_name}'[/bold green]. These are the tables you can explore:\n")
+
+    for key, value in numbered_tables.items():
+        print(f"{key}.  {value}")
+
+    table_choice = input("\nEnter the number of the table you'd like to explore: ")
+    try:
+        if numbered_tables[table_choice]:
+            return numbered_tables[table_choice]
+    except KeyError:
+        choose_a_table()
+
+def get_sample_of_working_table(working_table_choice):
+    the_limit = input("\nHow many rows would you like to see? ")
+    if the_limit.isnumeric():
+        console.clear()
+        disk_cur.execute(f"SELECT * FROM {working_table_choice} LIMIT {int(the_limit)};")
+        results = disk_cur.fetchall()
+        headers = list(map(lambda attr : attr[0], disk_cur.description))
+        message = f"Exploring project [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] lines (of [hot_pink2]{tables_row_counts[working_table_choice]}[/hot_pink2]) from table [bold cyan]'{working_table_choice}'[/bold cyan]."
+        generate_sample_table(headers, results, message)
+    else:
+        get_sample_of_working_table(working_table_choice)
+
+def get_sample_of_working_table_ordered(working_table_choice, direction):
+    console.clear()
+    kind_of_order = {"ASC": "ascending", "DESC": "descending"}
+    column_options = {}
+    i = 1
+    for item in tables_and_columns[working_table_choice]:
+        column_options[str(i)] = item
+        i += 1
+    
+    print("\n")
+    for key, value in column_options.items():
+        print(f"{key}. {value}")
+    column_choice = input("\n\nEnter the number of the column you'd like to order by: ")
+
+    the_limit = input("\nHow many rows would you like to see? ")
+    if the_limit.isnumeric():
+        console.clear()
+        disk_cur.execute(f"SELECT * FROM {working_table_choice} ORDER BY {column_options[column_choice]} {direction} LIMIT {int(the_limit)};")
+        results = disk_cur.fetchall()
+        headers = list(map(lambda attr : attr[0], disk_cur.description))
+        message = f"Exploring project [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] lines (of [hot_pink2]{tables_row_counts[working_table_choice]}[/hot_pink2]) from table [bold cyan]'{working_table_choice}'[/bold cyan] in {kind_of_order[direction]} order."
+        generate_sample_table(headers, results, message)
+    else:
+        get_sample_of_working_table_ordered(working_table_choice, direction)
+
+def get_sample_of_working_table_max(working_table_choice):
+    console.clear()
+    column_options = {}
+    i = 1
+    for item in tables_and_columns[working_table_choice]:
+        column_options[str(i)] = item
+        i += 1
+    
+    print("\n")
+    for key, value in column_options.items():
+        print(f"{key}. {value}")
+    column_choice = input("\n\nEnter the number of the column you'd like the maximum value for: ")
+
+    if column_choice in column_options.keys():
+        console.clear()
+        disk_cur.execute(f"SELECT MAX({column_options[column_choice]}) FROM {working_table_choice};")
+        results = disk_cur.fetchall()
+        headers = list(map(lambda attr : attr[0], disk_cur.description))
+        message = f"Exploring project [bold green]'{working_file_name}'[/bold green]. Showing maximum value of [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
+        generate_sample_table(headers, results, message)
+    else:
+        get_sample_of_working_table_max(working_table_choice)
+
+def get_sample_of_working_table_sum(working_table_choice):
+    console.clear()
+    column_options = {}
+    i = 1
+    for item in tables_and_columns[working_table_choice]:
+        column_options[str(i)] = item
+        i += 1
+    
+    print("\n")
+    for key, value in column_options.items():
+        print(f"{key}. {value}")
+    column_choice = input("\n\nEnter the number of the column you'd like to sum: ")
+
+    if column_choice in column_options.keys():
+        console.clear()
+        disk_cur.execute(f"SELECT SUM({column_options[column_choice]}) FROM {working_table_choice};")
+        results = disk_cur.fetchall()
+        headers = list(map(lambda attr : attr[0], disk_cur.description))
+        message = f"Exploring project [bold green]'{working_file_name}'[/bold green]. Showing sum for [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
+        generate_sample_table(headers, results, message)
+    else:
+        get_sample_of_working_table_sum(working_table_choice)
+
+def get_sample_of_working_table_avg(working_table_choice):
+    console.clear()
+    column_options = {}
+    i = 1
+    for item in tables_and_columns[working_table_choice]:
+        column_options[str(i)] = item
+        i += 1
+    
+    print("\n")
+    for key, value in column_options.items():
+        print(f"{key}. {value}")
+    column_choice = input("\n\nEnter the number of the column you'd like to sum: ")
+
+    if column_choice in column_options.keys():
+        console.clear()
+        disk_cur.execute(f"SELECT AVG({column_options[column_choice]}) FROM {working_table_choice};")
+        results = disk_cur.fetchall()
+        headers = list(map(lambda attr : attr[0], disk_cur.description))
+        message = f"Exploring project [bold green]'{working_file_name}'[/bold green]. Showing average for [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
+        generate_sample_table(headers, results, message)
+    else:
+        get_sample_of_working_table_avg(working_table_choice)
+
+def get_column_stats_sample(working_table_choice):
+    console.clear()
+    column_options = {}
+    i = 1
+    for item in tables_and_columns[working_table_choice]:
+        column_options[str(i)] = item
+        i += 1
+    
+    print("\n")
+    for key, value in column_options.items():
+        print(f"{key}. {value}")
+    column_choice = input("\n\nEnter the number of the column you'd like the maximum value for: ")
+
+    if column_choice in column_options.keys():
+        console.clear()
+        disk_cur.execute(f"SELECT MAX({column_options[column_choice]}), SUM({column_options[column_choice]}), AVG({column_options[column_choice]}) FROM {working_table_choice};")
+        results = disk_cur.fetchall()
+        headers = list(map(lambda attr : attr[0], disk_cur.description))
+        message = f"Exploring project [bold green]'{working_file_name}'[/bold green]. Showing column stats for [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
+        generate_sample_table(headers, results, message)
+    else:
+        get_column_stats_sample(working_table_choice)
+
+def get_sample_by_searching_for_string(working_table_choice):
+    console.clear()
+    column_options = {}
+    text_to_search = ""
+    the_limit = ""
+
+    i = 1
+    for item in tables_and_columns[working_table_choice]:
+        column_options[str(i)] = item
+        i += 1
+    
+    print("\n")
+    for key, value in column_options.items():
+        print(f"{key}. {value}")
+    column_choice = input("\n\nEnter the number of the column you'd like to search: ")
+
+    if column_choice in column_options.keys():
+        console.clear()
+        while text_to_search == "":
+            text_to_search = input("\nEnter search term: ")
+        while not the_limit.isnumeric():
+            the_limit = input("\nHow many rows? (Limit recommended for speed!) ")
+    
+        disk_cur.execute(f"SELECT * FROM {working_table_choice} WHERE {column_options[column_choice]} LIKE '%{text_to_search}%' LIMIT {the_limit};")
+        results = disk_cur.fetchall()
+        headers = list(map(lambda attr : attr[0], disk_cur.description))
+        message = f"Exploring project [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] results for [green]'{text_to_search}'[/green] in [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
+        generate_sample_table(headers, results, message)
+    else:
+        get_sample_of_working_table_sum(working_table_choice)
+
+def get_sample_by_searching_for_multiple_strings(working_table_choice):
+    console.clear()
+    column_options = {}
+    first_text_to_search = ""
+    second_text_to_search = ""
+    the_limit = ""
+
+    i = 1
+    for item in tables_and_columns[working_table_choice]:
+        column_options[str(i)] = item
+        i += 1
+    
+    print("\n")
+    for key, value in column_options.items():
+        print(f"{key}. {value}")
+    column_choice = input("\n\nEnter the number of the first column you'd like to search: ")
+
+    if column_choice in column_options.keys():
+        console.clear()
+        while first_text_to_search == "":
+            first_text_to_search = input("\nEnter first search term: ")
+
+    print("\n")
+    for key, value in column_options.items():
+        print(f"{key}. {value}")
+    second_column_choice = input("\n\nEnter the number of the second column you'd like to search: ")
+    
+    if second_column_choice in column_options.keys():
+        console.clear()
+        while second_text_to_search == "":
+            second_text_to_search = input("\nEnter second search term: ")
+
+    while not the_limit.isnumeric():
+        the_limit = input("\nHow many rows? (Limit recommended for speed!) ")
+    
+        disk_cur.execute(f"SELECT * FROM {working_table_choice} WHERE {column_options[column_choice]} LIKE '%{first_text_to_search}%' AND {column_options[second_column_choice]} LIKE '%{second_text_to_search}%' LIMIT {the_limit};")
+        results = disk_cur.fetchall()
+        headers = list(map(lambda attr : attr[0], disk_cur.description))
+        message = f"Exploring project [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] results for [green]'{first_text_to_search}'[/green] in [hot_pink2]{column_options[column_choice]}[/hot_pink2] and [green]'{second_text_to_search}'[/green] in [hot_pink2]{column_options[second_column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
+        generate_sample_table(headers, results, message)
+    else:
+        get_sample_by_searching_for_multiple_strings(working_table_choice)
+
+def get_sample_by_searching_for_values_between(working_table_choice):
+    console.clear()
+    column_options = {}
+    lower_bound = ""
+    upper_bound = ""
+    the_limit = ""
+
+    i = 1
+    for item in tables_and_columns[working_table_choice]:
+        column_options[str(i)] = item
+        i += 1
+    
+    print("\n")
+    for key, value in column_options.items():
+        print(f"{key}. {value}")
+    column_choice = input("\n\nEnter the number of the column you'd like to search: ")
+
+    if column_choice in column_options.keys():
+        console.clear()
+        print("\n")
+        while not lower_bound.isnumeric():
+            lower_bound = input("\nEnter the lower bound: ")
+        while not upper_bound.isnumeric():
+            upper_bound = input("Enter the upper bound: ")
+        while not the_limit.isnumeric():
+            the_limit = input("How many rows? (Limit recommended for speed!) ")
+    
+        disk_cur.execute(f"SELECT * FROM {working_table_choice} WHERE {column_options[column_choice]} BETWEEN {lower_bound} AND {upper_bound} ORDER BY {column_options[column_choice]} DESC LIMIT {the_limit};")
+        results = disk_cur.fetchall()
+        headers = list(map(lambda attr : attr[0], disk_cur.description))
+        message = f"Exploring project [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] results in descending order for in [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan] for values between [green]{lower_bound}[/green] and [green]{upper_bound}[/green]."
+        generate_sample_table(headers, results, message)
+    else:
+        get_sample_by_searching_for_values_between(working_table_choice)
+
+def generate_sample_table(headers, results, message):
+    console.clear()
+    global current_headers
+    global current_prepared_rows
+    prepared_rows = []
+
+    table = Table(title="", style="purple", title_style="bold white", show_lines=True)
+
+    for header in headers:
+        number_strings = ["count", "num", "total"]
+        if any(x in header for x in number_strings):
+            table.add_column(f"{header}", justify="right")
+        else:
+            table.add_column(f"{header}", justify="left")
+    
+    for item in results:
+        i = 0
+        prepared_row = ()
+        for thing in item:
+            if i <= len(item) - 1:
+                prepared_row += (str(item[i]),)
+                i += 1
+        table.add_row(*prepared_row)
+        prepared_rows.append(prepared_row)
+    
+    print("\n")
+    print(table)
+    print(message)
+    current_headers = headers
+    current_prepared_rows = prepared_rows
+    ask_about_refinements_to_sample(headers, results, message)
+
+def ask_about_refinements_to_sample(headers, results, message):
+    refinement_choice = ""
+    refinement_choices = {
+        '1': 'get_sample_of_working_table(working_table_choice)',
+        '2': 'get_sample_of_working_table_ordered(working_table_choice, "DESC")',
+        '3': 'get_sample_of_working_table_ordered(working_table_choice, "ASC")',
+        '4': 'get_sample_of_working_table_max(working_table_choice)',
+        '5': 'get_sample_of_working_table_sum(working_table_choice)',
+        '6': 'get_sample_of_working_table_avg(working_table_choice)',
+        '7': 'get_column_stats_sample(working_table_choice)',
+        '8': 'get_sample_by_searching_for_string(working_table_choice)',
+        '9': 'get_sample_by_searching_for_multiple_strings(working_table_choice)',
+        '10': 'get_sample_by_searching_for_values_between(working_table_choice)',
+        'S': None,
+        'T': None,
+        'P': None,
+        'Q': None
+        }
+    print("\n")
+    print("Here are some things you can do now:\n")
+    print("1.\tChange the sample size. \t\t6.\tGet the average for a given column.")
+    print("2.\tOrder by a given column (descending). \t7.\tGet all stats for a given column.")
+    print("3.\tOrder by a given column (ascending). \t8.\tSearch a column.")
+    print("4.\tGet the max value of a given column. \t9.\tSearch multiple columns.")
+    print("5.\tGet the sum for a given column. \t10.\tSearch a column for values between x and y.")
+    print("\n[cyan]P[/cyan].\tChoose another project. \t\t[cyan]T[/cyan].\tChoose another table.")
+    print("[cyan]S[/cyan].\tSave current results to csv. \t\t[cyan]Q[/cyan].\tQuit.\n")
+    
+    while refinement_choice not in refinement_choices.keys():
+        refinement_choice = input("What would you like to do? ")
+        if refinement_choice.lower() == 'q':
+            console.clear()
+            print("\nOk, bye!\n")
+            quit()
+        elif refinement_choice.lower() == 't':
+            choose_a_table()
+        elif refinement_choice.lower() == 'p':
+            choose_new_project()
+        elif refinement_choice.lower() == 's':
+            save_current_results_to_csv(headers, results, message)
+        elif refinement_choice in refinement_choices.keys():
+            exec(refinement_choices[refinement_choice])
+
+def save_current_results_to_csv(headers, results, message):
+    savefile_name = ""
+    confirm_save = ""
+    while savefile_name == "":
+        savefile_name = input("What should I call the file? (a .csv extension will be auto-added) ")
+    
+    if os.path.exists(f"./csvs/{savefile_name}.csv"):
+        while confirm_save.lower() not in ["y", "n"]:
+            confirm_save = input("File exists. Overwrite? (y/n) ")
+    
+    if confirm_save.lower() == "y" or confirm_save == "":    
+        with open(f"./csvs/{savefile_name}.csv", "w") as the_csv_file:
+            writer = csv.writer(the_csv_file)
+
+            #Write the header
+            writer.writerow(current_headers)
+            #Write the body
+            writer.writerows(current_prepared_rows)
+        
+        generate_sample_table(headers, results, message)
+    else:
+        save_current_results_to_csv(headers, results, message)
+
+
+def choose_a_table():
+    global working_table_choice
+    working_table_choice = get_table_choice_for_exploring()
+    get_sample_of_working_table(working_table_choice)
+
+def choose_new_project():
+    global working_file_name
+    working_file_name = get_project_choice()
+    choose_a_table()
+
+
+#Kickoff
+get_files_to_work_on()
+working_file_name = get_project_choice()
+
+#Connect to the selected db
+disk_con = sqlite3.connect(f"./dbs/{working_file_name}")
+disk_con.row_factory = sqlite3.Row
+disk_cur = disk_con.cursor()
+#YOLO
+disk_cur.execute("PRAGMA synchronous = OFF")
+disk_cur.execute("PRAGMA journal_mode = WAL")
+
+get_all_table_names_from_db()
+for table_name in tables_and_columns.keys():
+    get_all_column_names_from_table(table_name)
+    get_all_table_row_counts(table_name)
+
+choose_a_table()
