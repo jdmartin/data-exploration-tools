@@ -15,13 +15,15 @@ working_table_choice = ""
 current_headers = ""
 current_prepared_rows = ""
 
-#Project helpers
+#DB helpers
 def get_files_to_work_on():
     prepared_file_list = []
     file_list = os.listdir("./dbs/")
     for file in file_list:
         if file == '.DS_Store':
             pass #Protect against Mac nonsense.
+        elif file == '.keep':
+            pass #Protect against my nonsense.
         else:
             prepared_file_list.append(file)
     return prepared_file_list
@@ -29,25 +31,25 @@ def get_files_to_work_on():
 available_db_files = get_files_to_work_on()
 working_file_name = ""
 
-def get_project_choice():
-    project_choice = ""
+def get_file_choice():
+    file_choice = ""
     
     i = 1
     choices_dict = {}
-    for project in available_db_files:
-        choices_dict[str(i)] = project
+    for file in available_db_files:
+        choices_dict[str(i)] = file
         i += 1
     
-    while str(project_choice) not in choices_dict.keys():
+    while str(file_choice) not in choices_dict.keys():
         console.clear()
         print("\n")
         i = 1
-        for project in available_db_files:
-            console.print("[purple3]" + str(i) + "[/purple3]" + ". " + project)
+        for file in available_db_files:
+            console.print("[purple3]" + str(i) + "[/purple3]" + ". " + file)
             i += 1
-        project_choice = input("\nWhich project would you like to explore? ")
+        file_choice = input("\nWhich file would you like to explore? ")
         
-    working_file_name = choices_dict[str(project_choice)]
+    working_file_name = choices_dict[str(file_choice)]
     return working_file_name
 
 def get_all_table_names_from_db():
@@ -77,7 +79,7 @@ def get_table_choice_for_exploring():
         numbered_tables[str(i)] = table
         i += 1
 
-    print(f"Exploring project [bold green]'{working_file_name}'[/bold green]. These are the tables you can explore:\n")
+    print(f"Exploring file [bold green]'{working_file_name}'[/bold green]. These are the tables you can explore:\n")
 
     for key, value in numbered_tables.items():
         print(f"{key}.  {value}")
@@ -96,7 +98,7 @@ def get_sample_of_working_table(working_table_choice):
         disk_cur.execute(f"SELECT * FROM {working_table_choice} LIMIT {int(the_limit)};")
         results = disk_cur.fetchall()
         headers = list(map(lambda attr : attr[0], disk_cur.description))
-        message = f"Exploring project [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] lines (of [hot_pink2]{tables_row_counts[working_table_choice]}[/hot_pink2]) from table [bold cyan]'{working_table_choice}'[/bold cyan]."
+        message = f"Exploring file [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] lines (of [hot_pink2]{tables_row_counts[working_table_choice]}[/hot_pink2]) from table [bold cyan]'{working_table_choice}'[/bold cyan]."
         generate_sample_table(headers, results, message)
     else:
         get_sample_of_working_table(working_table_choice)
@@ -121,7 +123,7 @@ def get_sample_of_working_table_ordered(working_table_choice, direction):
         disk_cur.execute(f"SELECT * FROM {working_table_choice} ORDER BY {column_options[column_choice]} {direction} LIMIT {int(the_limit)};")
         results = disk_cur.fetchall()
         headers = list(map(lambda attr : attr[0], disk_cur.description))
-        message = f"Exploring project [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] lines (of [hot_pink2]{tables_row_counts[working_table_choice]}[/hot_pink2]) from table [bold cyan]'{working_table_choice}'[/bold cyan] in {kind_of_order[direction]} order."
+        message = f"Exploring file [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] lines (of [hot_pink2]{tables_row_counts[working_table_choice]}[/hot_pink2]) from table [bold cyan]'{working_table_choice}'[/bold cyan] in {kind_of_order[direction]} order."
         generate_sample_table(headers, results, message)
     else:
         get_sample_of_working_table_ordered(working_table_choice, direction)
@@ -144,7 +146,7 @@ def get_sample_of_working_table_max(working_table_choice):
         disk_cur.execute(f"SELECT MAX({column_options[column_choice]}) FROM {working_table_choice};")
         results = disk_cur.fetchall()
         headers = list(map(lambda attr : attr[0], disk_cur.description))
-        message = f"Exploring project [bold green]'{working_file_name}'[/bold green]. Showing maximum value of [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
+        message = f"Exploring file [bold green]'{working_file_name}'[/bold green]. Showing maximum value of [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
         generate_sample_table(headers, results, message)
     else:
         get_sample_of_working_table_max(working_table_choice)
@@ -167,7 +169,7 @@ def get_sample_of_working_table_sum(working_table_choice):
         disk_cur.execute(f"SELECT SUM({column_options[column_choice]}) FROM {working_table_choice};")
         results = disk_cur.fetchall()
         headers = list(map(lambda attr : attr[0], disk_cur.description))
-        message = f"Exploring project [bold green]'{working_file_name}'[/bold green]. Showing sum for [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
+        message = f"Exploring file [bold green]'{working_file_name}'[/bold green]. Showing sum for [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
         generate_sample_table(headers, results, message)
     else:
         get_sample_of_working_table_sum(working_table_choice)
@@ -190,7 +192,7 @@ def get_sample_of_working_table_avg(working_table_choice):
         disk_cur.execute(f"SELECT AVG({column_options[column_choice]}) FROM {working_table_choice};")
         results = disk_cur.fetchall()
         headers = list(map(lambda attr : attr[0], disk_cur.description))
-        message = f"Exploring project [bold green]'{working_file_name}'[/bold green]. Showing average for [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
+        message = f"Exploring file [bold green]'{working_file_name}'[/bold green]. Showing average for [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
         generate_sample_table(headers, results, message)
     else:
         get_sample_of_working_table_avg(working_table_choice)
@@ -213,7 +215,7 @@ def get_column_stats_sample(working_table_choice):
         disk_cur.execute(f"SELECT MAX({column_options[column_choice]}), SUM({column_options[column_choice]}), AVG({column_options[column_choice]}) FROM {working_table_choice};")
         results = disk_cur.fetchall()
         headers = list(map(lambda attr : attr[0], disk_cur.description))
-        message = f"Exploring project [bold green]'{working_file_name}'[/bold green]. Showing column stats for [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
+        message = f"Exploring file [bold green]'{working_file_name}'[/bold green]. Showing column stats for [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
         generate_sample_table(headers, results, message)
     else:
         get_column_stats_sample(working_table_choice)
@@ -244,7 +246,7 @@ def get_sample_by_searching_for_string(working_table_choice):
         disk_cur.execute(f"SELECT * FROM {working_table_choice} WHERE {column_options[column_choice]} LIKE '%{text_to_search}%' LIMIT {the_limit};")
         results = disk_cur.fetchall()
         headers = list(map(lambda attr : attr[0], disk_cur.description))
-        message = f"Exploring project [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] results for [green]'{text_to_search}'[/green] in [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
+        message = f"Exploring file [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] results for [green]'{text_to_search}'[/green] in [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
         generate_sample_table(headers, results, message)
     else:
         get_sample_of_working_table_sum(working_table_choice)
@@ -287,7 +289,7 @@ def get_sample_by_searching_for_multiple_strings(working_table_choice):
         disk_cur.execute(f"SELECT * FROM {working_table_choice} WHERE {column_options[column_choice]} LIKE '%{first_text_to_search}%' AND {column_options[second_column_choice]} LIKE '%{second_text_to_search}%' LIMIT {the_limit};")
         results = disk_cur.fetchall()
         headers = list(map(lambda attr : attr[0], disk_cur.description))
-        message = f"Exploring project [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] results for [green]'{first_text_to_search}'[/green] in [hot_pink2]{column_options[column_choice]}[/hot_pink2] and [green]'{second_text_to_search}'[/green] in [hot_pink2]{column_options[second_column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
+        message = f"Exploring file [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] results for [green]'{first_text_to_search}'[/green] in [hot_pink2]{column_options[column_choice]}[/hot_pink2] and [green]'{second_text_to_search}'[/green] in [hot_pink2]{column_options[second_column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
         generate_sample_table(headers, results, message)
     else:
         get_sample_by_searching_for_multiple_strings(working_table_choice)
@@ -322,7 +324,7 @@ def get_sample_by_searching_for_values_between(working_table_choice):
         disk_cur.execute(f"SELECT * FROM {working_table_choice} WHERE {column_options[column_choice]} BETWEEN {lower_bound} AND {upper_bound} ORDER BY {column_options[column_choice]} DESC LIMIT {the_limit};")
         results = disk_cur.fetchall()
         headers = list(map(lambda attr : attr[0], disk_cur.description))
-        message = f"Exploring project [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] results in descending order for in [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan] for values between [green]{lower_bound}[/green] and [green]{upper_bound}[/green]."
+        message = f"Exploring file [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] results in descending order for in [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan] for values between [green]{lower_bound}[/green] and [green]{upper_bound}[/green]."
         generate_sample_table(headers, results, message)
     else:
         get_sample_by_searching_for_values_between(working_table_choice)
@@ -374,7 +376,7 @@ def ask_about_refinements_to_sample(headers, results, message):
         '10': 'get_sample_by_searching_for_values_between(working_table_choice)',
         'S': None,
         'T': None,
-        'P': None,
+        'F': None,
         'Q': None
         }
     print("\n")
@@ -384,7 +386,7 @@ def ask_about_refinements_to_sample(headers, results, message):
     print("3.\tOrder by a given column (ascending). \t8.\tSearch a column.")
     print("4.\tGet the max value of a given column. \t9.\tSearch multiple columns.")
     print("5.\tGet the sum for a given column. \t10.\tSearch a column for values between x and y.")
-    print("\n[cyan]P[/cyan].\tChoose another project. \t\t[cyan]T[/cyan].\tChoose another table.")
+    print("\n[cyan]F[/cyan].\tChoose another file. \t\t\t[cyan]T[/cyan].\tChoose another table.")
     print("[cyan]S[/cyan].\tSave current results to csv. \t\t[cyan]Q[/cyan].\tQuit.\n")
     
     while refinement_choice not in refinement_choices.keys():
@@ -395,8 +397,8 @@ def ask_about_refinements_to_sample(headers, results, message):
             quit()
         elif refinement_choice.lower() == 't':
             choose_a_table()
-        elif refinement_choice.lower() == 'p':
-            choose_new_project()
+        elif refinement_choice.lower() == 'f':
+            choose_new_file()
         elif refinement_choice.lower() == 's':
             save_current_results_to_csv(headers, results, message)
         elif refinement_choice in refinement_choices.keys():
@@ -431,15 +433,15 @@ def choose_a_table():
     working_table_choice = get_table_choice_for_exploring()
     get_sample_of_working_table(working_table_choice)
 
-def choose_new_project():
+def choose_new_file():
     global working_file_name
-    working_file_name = get_project_choice()
+    working_file_name = get_file_choice()
     choose_a_table()
 
 
 #Kickoff
 get_files_to_work_on()
-working_file_name = get_project_choice()
+working_file_name = get_file_choice()
 
 #Connect to the selected db
 disk_con = sqlite3.connect(f"./dbs/{working_file_name}")
