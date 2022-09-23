@@ -374,10 +374,10 @@ def ask_about_refinements_to_sample(headers, results, message):
         '8': 'get_sample_by_searching_for_string(working_table_choice)',
         '9': 'get_sample_by_searching_for_multiple_strings(working_table_choice)',
         '10': 'get_sample_by_searching_for_values_between(working_table_choice)',
-        'S': None,
-        'T': None,
-        'F': None,
-        'Q': None
+        's': 'save_current_results_to_csv(headers, results, message)',
+        't': 'choose_a_table()',
+        'p': 'choose_new_file()',
+        'q': 'exit_the_program()'
         }
     print("\n")
     print("Here are some things you can do now:\n")
@@ -386,23 +386,13 @@ def ask_about_refinements_to_sample(headers, results, message):
     print("3.\tOrder by a given column (ascending). \t8.\tSearch a column.")
     print("4.\tGet the max value of a given column. \t9.\tSearch multiple columns.")
     print("5.\tGet the sum for a given column. \t10.\tSearch a column for values between x and y.")
-    print("\n[cyan]F[/cyan].\tChoose another file. \t\t\t[cyan]T[/cyan].\tChoose another table.")
+    print("\n[cyan]P[/cyan].\tChoose another file. \t\t\t[cyan]T[/cyan].\tChoose another table.")
     print("[cyan]S[/cyan].\tSave current results to csv. \t\t[cyan]Q[/cyan].\tQuit.\n")
     
-    while refinement_choice not in refinement_choices.keys():
+    while refinement_choice.lower() not in refinement_choices.keys():
         refinement_choice = input("What would you like to do? ")
-        if refinement_choice.lower() == 'q':
-            console.clear()
-            print("\nOk, bye!\n")
-            quit()
-        elif refinement_choice.lower() == 't':
-            choose_a_table()
-        elif refinement_choice.lower() == 'f':
-            choose_new_file()
-        elif refinement_choice.lower() == 's':
-            save_current_results_to_csv(headers, results, message)
-        elif refinement_choice in refinement_choices.keys():
-            exec(refinement_choices[refinement_choice])
+        if refinement_choice.lower() in refinement_choices.keys():
+            exec(refinement_choices[refinement_choice.lower()])
 
 def save_current_results_to_csv(headers, results, message):
     savefile_name = ""
@@ -427,6 +417,10 @@ def save_current_results_to_csv(headers, results, message):
     else:
         save_current_results_to_csv(headers, results, message)
 
+def exit_the_program():
+    console.clear()
+    print("\nOk, bye!\n")
+    quit()
 
 def choose_a_table():
     global working_table_choice
