@@ -3,7 +3,7 @@ import os
 import sqlite3
 
 from rich import print
-from rich.console import Console
+from rich.console import Console, OverflowMethod
 from rich.prompt import Prompt
 from rich.table import Table
 
@@ -82,7 +82,7 @@ def get_table_choice_for_exploring():
     print(f"Exploring file [bold green]'{working_file_name}'[/bold green]. These are the tables you can explore:\n")
 
     for key, value in numbered_tables.items():
-        print(f"{key}.  {value}")
+        print(f"{key}.\t  {value}")
 
     table_choice = input("\nEnter the number of the table you'd like to explore: ")
     try:
@@ -166,7 +166,7 @@ def get_sample_of_working_table_sum(working_table_choice):
 
     if column_choice in column_options.keys():
         console.clear()
-        disk_cur.execute(f"SELECT SUM({column_options[column_choice]}) FROM {working_table_choice};")
+        disk_cur.execute(f"SELECT SUM(`{column_options[column_choice]}`) FROM {working_table_choice};")
         results = disk_cur.fetchall()
         headers = list(map(lambda attr : attr[0], disk_cur.description))
         message = f"Exploring file [bold green]'{working_file_name}'[/bold green]. Showing sum for [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
@@ -189,7 +189,7 @@ def get_sample_of_working_table_avg(working_table_choice):
 
     if column_choice in column_options.keys():
         console.clear()
-        disk_cur.execute(f"SELECT AVG({column_options[column_choice]}) FROM {working_table_choice};")
+        disk_cur.execute(f"SELECT AVG(`{column_options[column_choice]}`) FROM {working_table_choice};")
         results = disk_cur.fetchall()
         headers = list(map(lambda attr : attr[0], disk_cur.description))
         message = f"Exploring file [bold green]'{working_file_name}'[/bold green]. Showing average for [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
@@ -212,13 +212,39 @@ def get_column_stats_sample(working_table_choice):
 
     if column_choice in column_options.keys():
         console.clear()
-        disk_cur.execute(f"SELECT MAX({column_options[column_choice]}), SUM({column_options[column_choice]}), AVG({column_options[column_choice]}) FROM {working_table_choice};")
+        disk_cur.execute(f"SELECT MAX(`{column_options[column_choice]}`), SUM(`{column_options[column_choice]}`), AVG(`{column_options[column_choice]}`) FROM {working_table_choice};")
         results = disk_cur.fetchall()
         headers = list(map(lambda attr : attr[0], disk_cur.description))
         message = f"Exploring file [bold green]'{working_file_name}'[/bold green]. Showing column stats for [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
         generate_sample_table(headers, results, message)
     else:
         get_column_stats_sample(working_table_choice)
+
+def get_search_term():
+    search_kind = ""
+    search_term = ""
+    types_of_search = {
+        "1": "Result includes search term.",
+        "2": "Result begins with search term.",
+        "3": "Result ends with search term."
+    }
+
+    print("What kind of search would you like to do?\n")
+    for key, description in types_of_search.items():
+        print(str(key) + ".\t" + description)
+    
+    while search_kind not in types_of_search.keys():
+        search_kind = input("\nEnter choice: ")
+    
+    while search_term == "":
+        search_term = input("Enter search term (note: you can use an underscore as a wildcard!): ")
+    
+    if search_kind == "1":
+        return f"%{search_term}%"
+    elif search_kind == '2':
+        return f"{search_term}%"
+    elif search_kind == '3':
+        return f"%{search_term}"
 
 def get_sample_by_searching_for_string(working_table_choice):
     console.clear()
@@ -239,14 +265,14 @@ def get_sample_by_searching_for_string(working_table_choice):
     if column_choice in column_options.keys():
         console.clear()
         while text_to_search == "":
-            text_to_search = input("\nEnter search term: ")
+            text_to_search = get_search_term()
         while not the_limit.isnumeric():
             the_limit = input("\nHow many rows? (Limit recommended for speed!) ")
     
-        disk_cur.execute(f"SELECT * FROM {working_table_choice} WHERE {column_options[column_choice]} LIKE '%{text_to_search}%' LIMIT {the_limit};")
+        disk_cur.execute(f"SELECT * FROM {working_table_choice} WHERE `{column_options[column_choice]}` LIKE '{text_to_search}' LIMIT {the_limit};")
         results = disk_cur.fetchall()
         headers = list(map(lambda attr : attr[0], disk_cur.description))
-        message = f"Exploring file [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] results for [green]'{text_to_search}'[/green] in [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
+        message = f"Exploring file [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] results for [green]'{text_to_search.replace('%', '')}'[/green] in [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
         generate_sample_table(headers, results, message)
     else:
         get_sample_of_working_table_sum(working_table_choice)
@@ -271,7 +297,7 @@ def get_sample_by_searching_for_multiple_strings(working_table_choice):
     if column_choice in column_options.keys():
         console.clear()
         while first_text_to_search == "":
-            first_text_to_search = input("\nEnter first search term: ")
+            first_text_to_search = get_search_term()
 
     print("\n")
     for key, value in column_options.items():
@@ -281,15 +307,15 @@ def get_sample_by_searching_for_multiple_strings(working_table_choice):
     if second_column_choice in column_options.keys():
         console.clear()
         while second_text_to_search == "":
-            second_text_to_search = input("\nEnter second search term: ")
+            second_text_to_search = get_search_term()
 
     while not the_limit.isnumeric():
         the_limit = input("\nHow many rows? (Limit recommended for speed!) ")
     
-        disk_cur.execute(f"SELECT * FROM {working_table_choice} WHERE {column_options[column_choice]} LIKE '%{first_text_to_search}%' AND {column_options[second_column_choice]} LIKE '%{second_text_to_search}%' LIMIT {the_limit};")
+        disk_cur.execute(f"SELECT * FROM {working_table_choice} WHERE `{column_options[column_choice]}` LIKE '{first_text_to_search}' AND {column_options[second_column_choice]} LIKE '{second_text_to_search}' LIMIT {the_limit};")
         results = disk_cur.fetchall()
         headers = list(map(lambda attr : attr[0], disk_cur.description))
-        message = f"Exploring file [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] results for [green]'{first_text_to_search}'[/green] in [hot_pink2]{column_options[column_choice]}[/hot_pink2] and [green]'{second_text_to_search}'[/green] in [hot_pink2]{column_options[second_column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
+        message = f"Exploring file [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] results for [green]'{first_text_to_search.replace('%', '')}'[/green] in [hot_pink2]{column_options[column_choice]}[/hot_pink2] and [green]'{second_text_to_search.replace('%', '')}'[/green] in [hot_pink2]{column_options[second_column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
         generate_sample_table(headers, results, message)
     else:
         get_sample_by_searching_for_multiple_strings(working_table_choice)
@@ -321,7 +347,7 @@ def get_sample_by_searching_for_values_between(working_table_choice):
         while not the_limit.isnumeric():
             the_limit = input("How many rows? (Limit recommended for speed!) ")
     
-        disk_cur.execute(f"SELECT * FROM {working_table_choice} WHERE {column_options[column_choice]} BETWEEN {lower_bound} AND {upper_bound} ORDER BY {column_options[column_choice]} DESC LIMIT {the_limit};")
+        disk_cur.execute(f"SELECT * FROM {working_table_choice} WHERE `{column_options[column_choice]}` BETWEEN {lower_bound} AND {upper_bound} ORDER BY `{column_options[column_choice]}` DESC LIMIT {the_limit};")
         results = disk_cur.fetchall()
         headers = list(map(lambda attr : attr[0], disk_cur.description))
         message = f"Exploring file [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] results in descending order for in [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan] for values between [green]{lower_bound}[/green] and [green]{upper_bound}[/green]."
@@ -335,14 +361,14 @@ def generate_sample_table(headers, results, message):
     global current_prepared_rows
     prepared_rows = []
 
-    table = Table(title="", style="purple", title_style="bold white", show_lines=True)
+    table = Table(title="", style="purple", title_style="bold white", show_lines=True, show_footer=True, header_style="bold magenta", footer_style="bold turquoise2")
 
     for header in headers:
         number_strings = ["count", "num", "total"]
         if any(x in header for x in number_strings):
-            table.add_column(f"{header}", justify="right")
+            table.add_column(f"{header}", justify="right", overflow="fold", footer=f"{header}")
         else:
-            table.add_column(f"{header}", justify="left")
+            table.add_column(f"{header}", justify="left", overflow="fold", footer=f"{header}")
     
     for item in results:
         i = 0
