@@ -91,8 +91,14 @@ def get_table_choice_for_exploring():
     except KeyError:
         choose_a_table()
 
+def get_length_of_working_table(working_table_choice):
+    disk_cur.execute(f"SELECT COUNT(rowid) FROM {working_table_choice};")
+    the_rowcount = disk_cur.fetchone()
+    return the_rowcount[0]
+
 def get_sample_of_working_table(working_table_choice):
-    the_limit = input("\nHow many rows would you like to see? ")
+    the_rowcount = get_length_of_working_table(working_table_choice)
+    the_limit = input(f"\nHow many rows would you like to see? (total rows: {the_rowcount}) ")
     if the_limit.isnumeric():
         console.clear()
         disk_cur.execute(f"SELECT * FROM {working_table_choice} LIMIT {int(the_limit)};")
@@ -105,6 +111,7 @@ def get_sample_of_working_table(working_table_choice):
 
 def get_sample_of_working_table_ordered(working_table_choice, direction):
     console.clear()
+    the_rowcount = get_length_of_working_table(working_table_choice)
     kind_of_order = {"ASC": "ascending", "DESC": "descending"}
     column_options = {}
     i = 1
@@ -117,7 +124,7 @@ def get_sample_of_working_table_ordered(working_table_choice, direction):
         print(f"{key}. {value}")
     column_choice = input("\n\nEnter the number of the column you'd like to order by: ")
 
-    the_limit = input("\nHow many rows would you like to see? ")
+    the_limit = input(f"\nHow many rows would you like to see? (total rows: {the_rowcount}) ")
     if the_limit.isnumeric():
         console.clear()
         disk_cur.execute(f"SELECT * FROM {working_table_choice} ORDER BY {column_options[column_choice]} {direction} LIMIT {int(the_limit)};")
@@ -248,6 +255,7 @@ def get_search_term():
 
 def get_sample_by_searching_for_string(working_table_choice):
     console.clear()
+    the_rowcount = get_length_of_working_table(working_table_choice)
     column_options = {}
     text_to_search = ""
     the_limit = ""
@@ -266,8 +274,20 @@ def get_sample_by_searching_for_string(working_table_choice):
         console.clear()
         while text_to_search == "":
             text_to_search = get_search_term()
-        while not the_limit.isnumeric():
-            the_limit = input("\nHow many rows? (Limit recommended for speed!) ")
+        
+        disk_cur.execute(f"SELECT COUNT(*) FROM {working_table_choice} WHERE `{column_options[column_choice]}` LIKE '{text_to_search}';")
+        count_of_matches = disk_cur.fetchone()
+
+        if count_of_matches[0] == 0:
+            console.clear()
+            print(f"\nSorry, no matches for [red\n]'{text_to_search.replace('%', '')}'[/red].")
+            press_to_return = None
+            while press_to_return is None:
+                press_to_return = input("Press any key to return to the menu...")
+            choose_a_table()
+        else:
+            while not the_limit.isnumeric():
+                the_limit = input(f"\nHow many rows would you like to see? (total matching rows: {count_of_matches[0]}) ")
     
         disk_cur.execute(f"SELECT * FROM {working_table_choice} WHERE `{column_options[column_choice]}` LIKE '{text_to_search}' LIMIT {the_limit};")
         results = disk_cur.fetchall()
@@ -279,6 +299,7 @@ def get_sample_by_searching_for_string(working_table_choice):
 
 def get_sample_by_searching_for_multiple_strings(working_table_choice):
     console.clear()
+    the_rowcount = get_length_of_working_table(working_table_choice)
     column_options = {}
     first_text_to_search = ""
     second_text_to_search = ""
@@ -309,8 +330,19 @@ def get_sample_by_searching_for_multiple_strings(working_table_choice):
         while second_text_to_search == "":
             second_text_to_search = get_search_term()
 
-    while not the_limit.isnumeric():
-        the_limit = input("\nHow many rows? (Limit recommended for speed!) ")
+        disk_cur.execute(f"SELECT COUNT(*) FROM {working_table_choice} WHERE `{column_options[column_choice]}` LIKE '{first_text_to_search}' AND {column_options[second_column_choice]} LIKE '{second_text_to_search}';")
+        count_of_matches = disk_cur.fetchone()
+
+        if count_of_matches[0] == 0:
+            console.clear()
+            print(f"\nSorry, no matches for [red\n]'{first_text_to_search.replace('%', '')}'[/red] and [red\n]'{second_text_to_search.replace('%', '')}'[/red].")
+            press_to_return = None
+            while press_to_return is None:
+                press_to_return = input("Press any key to return to the menu...")
+            choose_a_table()
+        else:
+            while not the_limit.isnumeric():
+                the_limit = input(f"\nHow many rows would you like to see? (total matching rows: {count_of_matches[0]}) ")
     
         disk_cur.execute(f"SELECT * FROM {working_table_choice} WHERE `{column_options[column_choice]}` LIKE '{first_text_to_search}' AND {column_options[second_column_choice]} LIKE '{second_text_to_search}' LIMIT {the_limit};")
         results = disk_cur.fetchall()
@@ -322,6 +354,7 @@ def get_sample_by_searching_for_multiple_strings(working_table_choice):
 
 def get_sample_by_searching_for_values_between(working_table_choice):
     console.clear()
+    the_rowcount = get_length_of_working_table(working_table_choice)
     column_options = {}
     lower_bound = ""
     upper_bound = ""
@@ -344,8 +377,20 @@ def get_sample_by_searching_for_values_between(working_table_choice):
             lower_bound = input("\nEnter the lower bound: ")
         while not upper_bound.isnumeric():
             upper_bound = input("Enter the upper bound: ")
-        while not the_limit.isnumeric():
-            the_limit = input("How many rows? (Limit recommended for speed!) ")
+
+        disk_cur.execute(f"SELECT COUNT(*) FROM {working_table_choice} WHERE `{column_options[column_choice]}` BETWEEN {lower_bound} AND {upper_bound} ORDER BY `{column_options[column_choice]}`;")
+        count_of_matches = disk_cur.fetchone()
+
+        if count_of_matches[0] == 0:
+            console.clear()
+            print(f"\nSorry, no matches between [red\n]'{lower_bound.replace('%', '')}'[/red] and [red\n]'{upper_bound.replace('%', '')}'[/red] in {column_options[column_choice]}.")
+            press_to_return = None
+            while press_to_return is None:
+                press_to_return = input("Press any key to return to the menu...")
+            choose_a_table()
+        else:
+            while not the_limit.isnumeric():
+                the_limit = input(f"\nHow many rows would you like to see? (total matching rows: {count_of_matches[0]}) ")
     
         disk_cur.execute(f"SELECT * FROM {working_table_choice} WHERE `{column_options[column_choice]}` BETWEEN {lower_bound} AND {upper_bound} ORDER BY `{column_options[column_choice]}` DESC LIMIT {the_limit};")
         results = disk_cur.fetchall()
