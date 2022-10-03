@@ -9,7 +9,7 @@ packages = [{include = "data_exploration_tools"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-rich = "^12.5.1"
+rich = "^12.6.0"
 
 
 [build-system]
