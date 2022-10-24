@@ -109,6 +109,19 @@ def get_sample_of_working_table(working_table_choice):
     else:
         get_sample_of_working_table(working_table_choice)
 
+def get_random_sample_of_working_table(working_table_choice):
+    the_rowcount = get_length_of_working_table(working_table_choice)
+    the_limit = input(f"\nHow many rows would you like to see? (total rows: {the_rowcount}) ")
+    if the_limit.isnumeric():
+        console.clear()
+        disk_cur.execute(f"SELECT * FROM {working_table_choice} ORDER BY RANDOM() LIMIT {int(the_limit)};")
+        results = disk_cur.fetchall()
+        headers = list(map(lambda attr : attr[0], disk_cur.description))
+        message = f"Exploring project [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] random lines (of [hot_pink2]{tables_row_counts[working_table_choice]}[/hot_pink2]) from table [bold cyan]'{working_table_choice}'[/bold cyan]."
+        generate_sample_table(headers, results, message)
+    else:
+        get_random_sample_of_working_table(working_table_choice)
+
 def get_sample_of_working_table_ordered(working_table_choice, direction):
     console.clear()
     the_rowcount = get_length_of_working_table(working_table_choice)
@@ -441,23 +454,25 @@ def ask_about_refinements_to_sample(headers, results, message):
         '4': 'get_sample_of_working_table_max(working_table_choice)',
         '5': 'get_sample_of_working_table_sum(working_table_choice)',
         '6': 'get_sample_of_working_table_avg(working_table_choice)',
-        '7': 'get_column_stats_sample(working_table_choice)',
-        '8': 'get_sample_by_searching_for_string(working_table_choice)',
-        '9': 'get_sample_by_searching_for_multiple_strings(working_table_choice)',
-        '10': 'get_sample_by_searching_for_values_between(working_table_choice)',
+        '7': 'get_random_sample_of_working_table(working_table_choice)',
+        '8': 'get_column_stats_sample(working_table_choice)',
+        '9': 'get_sample_by_searching_for_string(working_table_choice)',
+        '10': 'get_sample_by_searching_for_multiple_strings(working_table_choice)',
+        '11': 'get_sample_by_searching_for_values_between(working_table_choice)',
         's': 'save_current_results_to_csv(headers, results, message)',
         't': 'choose_a_table()',
-        'p': 'choose_new_file()',
+        'p': 'choose_new_project()',
         'q': 'exit_the_program()'
         }
     print("\n")
     print("Here are some things you can do now:\n")
-    print("1.\tChange the sample size. \t\t6.\tGet the average for a given column.")
-    print("2.\tOrder by a given column (descending). \t7.\tGet all stats for a given column.")
-    print("3.\tOrder by a given column (ascending). \t8.\tSearch a column.")
-    print("4.\tGet the max value of a given column. \t9.\tSearch multiple columns.")
-    print("5.\tGet the sum for a given column. \t10.\tSearch a column for values between x and y.")
-    print("\n[cyan]P[/cyan].\tChoose another file. \t\t\t[cyan]T[/cyan].\tChoose another table.")
+    print("1.\tChange the sample size. \t\t7.\tGet a random sample of the table.")
+    print("2.\tOrder by a given column (descending). \t8.\tGet all stats for a given column.")
+    print("3.\tOrder by a given column (ascending). \t9.\tSearch a column.")
+    print("4.\tGet the max value of a given column. \t10.\tSearch multiple columns.")
+    print("5.\tGet the sum for a given column. \t11.\tSearch a column for values between x and y.")
+    print("6.\tGet the average for a given column.")
+    print("\n[cyan]P[/cyan].\tChoose another project. \t\t[cyan]T[/cyan].\tChoose another table.")
     print("[cyan]S[/cyan].\tSave current results to csv. \t\t[cyan]Q[/cyan].\tQuit.\n")
     
     while refinement_choice.lower() not in refinement_choices.keys():
