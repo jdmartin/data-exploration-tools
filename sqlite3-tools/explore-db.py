@@ -246,7 +246,8 @@ def get_search_term():
     types_of_search = {
         "1": "Result includes search term.",
         "2": "Result begins with search term.",
-        "3": "Result ends with search term."
+        "3": "Result ends with search term.",
+        "4": "Exact match (no wildcards)"
     }
 
     print("What kind of search would you like to do?\n")
@@ -257,14 +258,19 @@ def get_search_term():
         search_kind = input("\nEnter choice: ")
     
     while search_term == "":
-        search_term = input("Enter search term (note: you can use an underscore as a wildcard!): ")
-    
+        if search_kind in ['1','2','3']:
+            search_term = input("Enter search term (note: you can use an underscore as a wildcard!): ")
+        else:
+            search_term = input("Enter your search term (must match precisely): ")
+
     if search_kind == "1":
-        return f"%{search_term}%"
+        return f"%{search_term}%", "LIKE"
     elif search_kind == '2':
-        return f"{search_term}%"
+        return f"{search_term}%", "LIKE"
     elif search_kind == '3':
-        return f"%{search_term}"
+        return f"%{search_term}", "LIKE"
+    elif search_kind == '4':
+        return search_term, "IS"
 
 def get_sample_by_searching_for_string(working_table_choice):
     console.clear()
@@ -286,9 +292,9 @@ def get_sample_by_searching_for_string(working_table_choice):
     if column_choice in column_options.keys():
         console.clear()
         while text_to_search == "":
-            text_to_search = get_search_term()
+            text_to_search, operation = get_search_term()
         
-        disk_cur.execute(f"SELECT COUNT(*) FROM {working_table_choice} WHERE `{column_options[column_choice]}` LIKE '{text_to_search}';")
+        disk_cur.execute(f"SELECT COUNT(*) FROM {working_table_choice} WHERE `{column_options[column_choice]}` {operation} '{text_to_search}';")
         count_of_matches = disk_cur.fetchone()
 
         if count_of_matches[0] == 0:
@@ -302,7 +308,7 @@ def get_sample_by_searching_for_string(working_table_choice):
             while not the_limit.isnumeric():
                 the_limit = input(f"\nHow many rows would you like to see? (total matching rows: {count_of_matches[0]}) ")
     
-        disk_cur.execute(f"SELECT * FROM {working_table_choice} WHERE `{column_options[column_choice]}` LIKE '{text_to_search}' LIMIT {the_limit};")
+        disk_cur.execute(f"SELECT * FROM {working_table_choice} WHERE `{column_options[column_choice]}` {operation} '{text_to_search}' LIMIT {the_limit};")
         results = disk_cur.fetchall()
         headers = list(map(lambda attr : attr[0], disk_cur.description))
         message = f"Exploring file [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] results for [green]'{text_to_search.replace('%', '')}'[/green] in [hot_pink2]{column_options[column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
@@ -331,7 +337,7 @@ def get_sample_by_searching_for_multiple_strings(working_table_choice):
     if column_choice in column_options.keys():
         console.clear()
         while first_text_to_search == "":
-            first_text_to_search = get_search_term()
+            first_text_to_search, first_operation = get_search_term()
 
     print("\n")
     for key, value in column_options.items():
@@ -341,9 +347,9 @@ def get_sample_by_searching_for_multiple_strings(working_table_choice):
     if second_column_choice in column_options.keys():
         console.clear()
         while second_text_to_search == "":
-            second_text_to_search = get_search_term()
+            second_text_to_search, second_operation = get_search_term()
 
-        disk_cur.execute(f"SELECT COUNT(*) FROM {working_table_choice} WHERE `{column_options[column_choice]}` LIKE '{first_text_to_search}' AND {column_options[second_column_choice]} LIKE '{second_text_to_search}';")
+        disk_cur.execute(f"SELECT COUNT(*) FROM {working_table_choice} WHERE `{column_options[column_choice]}` {first_operation} '{first_text_to_search}' AND {column_options[second_column_choice]} {second_operation} '{second_text_to_search}';")
         count_of_matches = disk_cur.fetchone()
 
         if count_of_matches[0] == 0:
@@ -357,7 +363,7 @@ def get_sample_by_searching_for_multiple_strings(working_table_choice):
             while not the_limit.isnumeric():
                 the_limit = input(f"\nHow many rows would you like to see? (total matching rows: {count_of_matches[0]}) ")
     
-        disk_cur.execute(f"SELECT * FROM {working_table_choice} WHERE `{column_options[column_choice]}` LIKE '{first_text_to_search}' AND {column_options[second_column_choice]} LIKE '{second_text_to_search}' LIMIT {the_limit};")
+        disk_cur.execute(f"SELECT * FROM {working_table_choice} WHERE `{column_options[column_choice]}` {first_operation} '{first_text_to_search}' AND {column_options[second_column_choice]} {second_operation} '{second_text_to_search}' LIMIT {the_limit};")
         results = disk_cur.fetchall()
         headers = list(map(lambda attr : attr[0], disk_cur.description))
         message = f"Exploring file [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] results for [green]'{first_text_to_search.replace('%', '')}'[/green] in [hot_pink2]{column_options[column_choice]}[/hot_pink2] and [green]'{second_text_to_search.replace('%', '')}'[/green] in [hot_pink2]{column_options[second_column_choice]}[/hot_pink2] from table [bold cyan]'{working_table_choice}'[/bold cyan]."
