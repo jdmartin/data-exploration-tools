@@ -114,7 +114,7 @@ def get_random_sample_of_working_table(working_table_choice):
     the_limit = input(f"\nHow many rows would you like to see? (total rows: {the_rowcount}) ")
     if the_limit.isnumeric():
         console.clear()
-        disk_cur.execute(f"SELECT * FROM {working_table_choice} ORDER BY RANDOM() LIMIT {int(the_limit)};")
+        disk_cur.execute(f"SELECT rowid,* FROM {working_table_choice} ORDER BY RANDOM() LIMIT {int(the_limit)};")
         results = disk_cur.fetchall()
         headers = list(map(lambda attr : attr[0], disk_cur.description))
         message = f"Exploring project [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] random lines (of [hot_pink2]{tables_row_counts[working_table_choice]}[/hot_pink2]) from table [bold cyan]'{working_table_choice}'[/bold cyan]."
