@@ -27,6 +27,10 @@ description = "Render rich text, tables, progress bars, syntax highlighting, mar
 category = "main"
 optional = false
 python-versions = ">=3.7.0"
+files = [
+    {file = "rich-13.0.1-py3-none-any.whl", hash = "sha256:41fe1d05f433b0f4724cda8345219213d2bfa472ef56b2f64f415b5b94d51b04"},
+    {file = "rich-13.0.1.tar.gz", hash = "sha256:25f83363f636995627a99f6e4abc52ed0970ebbd544960cc63cbb43aaac3d6f0"},
+]
 
 [package.dependencies]
 commonmark = ">=0.9.0,<0.10.0"
