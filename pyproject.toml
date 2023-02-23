@@ -11,6 +11,8 @@ packages = [{include = "data_exploration_tools"}]
 python = "^3.10"
 rich = "^13.0.0"
 
+[tool.pyright]
+reportUnboundVariable = false
 
 [build-system]
 requires = ["poetry-core"]
