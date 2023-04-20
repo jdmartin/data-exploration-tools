@@ -13,6 +13,7 @@ rich = "^13.3.4"
 
 [tool.pyright]
 reportUnboundVariable = false
+reportGeneralTypeIssues = false
 
 [build-system]
 requires = ["poetry-core"]

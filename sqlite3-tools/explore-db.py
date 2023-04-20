@@ -14,6 +14,11 @@ tables_row_counts = {}
 working_table_choice = ""
 current_headers = ""
 current_prepared_rows = ""
+disk_con = None
+disk_cur = None
+working_file_name = None
+tables_and_columns = {}
+table_row_counts = {}
 
 #DB helpers
 def get_files_to_work_on():
@@ -117,7 +122,7 @@ def get_random_sample_of_working_table(working_table_choice):
         disk_cur.execute(f"SELECT rowid,* FROM {working_table_choice} ORDER BY RANDOM() LIMIT {int(the_limit)};")
         results = disk_cur.fetchall()
         headers = list(map(lambda attr : attr[0], disk_cur.description))
-        message = f"Exploring project [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] random lines (of [hot_pink2]{tables_row_counts[working_table_choice]}[/hot_pink2]) from table [bold cyan]'{working_table_choice}'[/bold cyan]."
+        message = f"Exploring database [bold green]'{working_file_name}'[/bold green]. Showing [hot_pink2]{the_limit}[/hot_pink2] random lines (of [hot_pink2]{tables_row_counts[working_table_choice]}[/hot_pink2]) from table [bold cyan]'{working_table_choice}'[/bold cyan]."
         generate_sample_table(headers, results, message)
     else:
         get_random_sample_of_working_table(working_table_choice)
@@ -467,7 +472,7 @@ def ask_about_refinements_to_sample(headers, results, message):
         '11': 'get_sample_by_searching_for_values_between(working_table_choice)',
         's': 'save_current_results_to_csv(headers, results, message)',
         't': 'choose_a_table()',
-        'p': 'choose_new_project()',
+        'd': 'main()',
         'q': 'exit_the_program()'
         }
     print("\n")
@@ -478,7 +483,7 @@ def ask_about_refinements_to_sample(headers, results, message):
     print("4.\tGet the max value of a given column. \t10.\tSearch multiple columns.")
     print("5.\tGet the sum for a given column. \t11.\tSearch a column for values between x and y.")
     print("6.\tGet the average for a given column.")
-    print("\n[cyan]P[/cyan].\tChoose another project. \t\t[cyan]T[/cyan].\tChoose another table.")
+    print("\n[cyan]D[/cyan].\tChoose another database. \t\t[cyan]T[/cyan].\tChoose another table.")
     print("[cyan]S[/cyan].\tSave current results to csv. \t\t[cyan]Q[/cyan].\tQuit.\n")
     
     while refinement_choice.lower() not in refinement_choices.keys():
@@ -525,21 +530,31 @@ def choose_new_file():
     choose_a_table()
 
 
-#Kickoff
-get_files_to_work_on()
-working_file_name = get_file_choice()
+def main():
+    global disk_con, disk_cur, working_file_name, tables_and_columns, table_row_counts, working_table_choice
+    #Kickoff
+    if disk_con is not None:
+        disk_con.close()
+        working_table_choice = ""
+        tables_and_columns = {}
 
-#Connect to the selected db
-disk_con = sqlite3.connect(f"./dbs/{working_file_name}")
-disk_con.row_factory = sqlite3.Row
-disk_cur = disk_con.cursor()
-#YOLO
-disk_cur.execute("PRAGMA synchronous = OFF")
-disk_cur.execute("PRAGMA journal_mode = WAL")
+    get_files_to_work_on()
+    working_file_name = get_file_choice()
 
-get_all_table_names_from_db()
-for table_name in tables_and_columns.keys():
-    get_all_column_names_from_table(table_name)
-    get_all_table_row_counts(table_name)
+    #Connect to the selected db
+    disk_con = sqlite3.connect(f"./dbs/{working_file_name}")
+    disk_con.row_factory = sqlite3.Row
+    disk_cur = disk_con.cursor()
+    #YOLO
+    disk_cur.execute("PRAGMA synchronous = OFF")
+    disk_cur.execute("PRAGMA journal_mode = WAL")
 
-choose_a_table()
+    get_all_table_names_from_db()
+    for table_name in tables_and_columns.keys():
+        get_all_column_names_from_table(table_name)
+        get_all_table_row_counts(table_name)
+
+    choose_a_table()
+
+if __name__ == "__main__":
+    main()
