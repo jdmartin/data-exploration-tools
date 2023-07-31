@@ -9,7 +9,7 @@ packages = [{include = "data_exploration_tools"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-rich = "^13.4.2"
+rich = "^13.5.0"
 
 [tool.pyright]
 reportUnboundVariable = false
